@@ -44,7 +44,9 @@ def repo_root():
 
 
 def should_include(rel_path):
-    if rel_path.startswith(".git") or "/.git" in rel_path:
+    if any(part.startswith(".") or part == "__pycache__" for part in rel_path.split("/")):
+        return False
+    if rel_path.endswith((".log", ".jsonl", ".key", ".pem", ".p12", ".pfx", ".pyc")):
         return False
     if rel_path.endswith(".DS_Store"):
         return False
@@ -52,7 +54,7 @@ def should_include(rel_path):
         return False
     if rel_path.startswith("installer"):
         return False
-    if rel_path.endswith((".elf", ".exe")):
+    if rel_path.endswith((".elf", ".exe")) and not rel_path.startswith("shared/"):
         return False
     if rel_path in ("build_release.sh", "Makefile"):
         return False
@@ -97,10 +99,17 @@ def build_zip(page=None, version=None, build_time="dev"):
     # Target items to bundle
     include_paths = [
         "index.html",
+        "LICENSE",
+        "docs/TESTE_PS5.md",
+        "docs/TEST_RESULT_TEMPLATE.md",
+        "loader.html",
+        "probes",
+        "assets",
         "offsets",
         "shared",
         "src",
         "tools/send.py",
+        "tools/remote-loader/runtime-derive/derive-runtime.js",
         "payloads",
     ]
 
@@ -204,8 +213,8 @@ def main(argv=None):
         prog="build_host.py",
         description="Build standalone webkit-remote-loader-host.py with embedded files and certs.",
     )
-    parser.add_argument("--input", default=os.path.join(repo_root(), "host.py"),
-                        help="Source host script (default: host.py).")
+    parser.add_argument("--input", default=os.path.join(repo_root(), "tools", "host.py"),
+                        help="Source host script (default: tools/host.py).")
     parser.add_argument("--output", default=os.path.join(repo_root(), "webkit-remote-loader-host.py"),
                         help="Output script (default: webkit-remote-loader-host.py).")
     parser.add_argument("--version", default=None,

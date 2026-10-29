@@ -582,11 +582,11 @@ def build_html(payloads, title=None, include_kexp=True, embedded_files=None,
         with open(filename, "rb") as f:
             binaries[path] = base64.b64encode(f.read()).decode("ascii")
 
-    index_html = read_text("index.html")
+    index_html = read_text("loader.html")
     style = re.search(r"<style>(?P<body>.*?)</style>", index_html, re.DOTALL)
     body = re.search(r"<body>(?P<body>.*?)</body>", index_html, re.DOTALL)
     if not style or not body:
-        raise SystemExit("index.html no longer has the <style>/<body> this tool copies")
+        raise SystemExit("loader.html no longer has the <style>/<body> this tool copies")
     markup = re.sub(r"<script\b[^>]*>.*?</script>", "", body.group("body"), flags=re.DOTALL)
     # A standalone page opens no loader socket. Keep the served page's HUD and
     # its reserved console space out of the generated document.

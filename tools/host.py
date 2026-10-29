@@ -39,7 +39,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 # ===========================================================================
 
 # [[VERSION_PLACEHOLDER]]
-VERSION = "0.2.0"
+VERSION = "0.1.1"
 HOST_NAME = "PS5 WEBKIT REMOTE LOADER"
 
 # [[BUILD_TIME_PLACEHOLDER]]
@@ -56,7 +56,8 @@ EMBEDDED_ZIP_B64 = ""
 
 DEFAULT_TARGET = "manuals.playstation.net"
 DEFAULT_TTL = 300
-REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.realpath(os.path.join(os.path.dirname(__file__),
+                                        "." if EMBEDDED_ZIP_B64 else ".."))
 BEACON_LOG = os.path.join(REPO_ROOT, "host-beacons.log")
 
 
@@ -233,8 +234,9 @@ class BeaconStore:
                     self._log_path, "a", encoding="utf-8", buffering=1
                 )
             self._log_fh.write(line + "\n")
-        except OSError:
-            pass
+        except OSError as exc:
+            bad(f"Could not write beacon log {self._log_path}: {exc}")
+            raise
 
         self._display(entry)
         return entry
@@ -624,15 +626,18 @@ def resolve_file(rel_path, firmware=None, query_exploit=None):
     kind: "zip" (embedded bundle) or "file" (local filesystem).
     For "file", data is None -- the caller reads it.
     """
+    if any(part.startswith(".") for part in rel_path.split("/")) or rel_path.endswith(
+            (".key", ".pem", ".p12", ".pfx", ".log", ".jsonl")):
+        return None
     candidates = [rel_path]
 
-    is_index = not rel_path or rel_path.endswith("/")
+    is_index = not rel_path or rel_path in ("index.html", "index.htm") or rel_path.endswith("/")
     if is_index:
+        prefix = rel_path if rel_path.endswith("/") else ""
+        candidates = [prefix + "index.html", prefix + "index.htm"]
         preferred = choose_index_page(firmware, query_exploit)
         if preferred:
-            candidates = [preferred, rel_path + "index.html", rel_path + "index.htm"]
-        else:
-            candidates = [rel_path + "index.html", rel_path + "index.htm"]
+            candidates.insert(0, preferred)
     elif rel_path == "relapse.html":
         candidates.append("index.html")
 
@@ -653,7 +658,7 @@ def resolve_file(rel_path, firmware=None, query_exploit=None):
     for candidate in candidates:
         full = os.path.join(REPO_ROOT, candidate)
         try:
-            real = os.path.abspath(full)
+            real = os.path.realpath(full)
             if (os.path.commonpath([real, REPO_ROOT]) == REPO_ROOT
                     and os.path.isfile(full)):
                 return "file", full, candidate, None, os.path.getmtime(full)
@@ -735,7 +740,8 @@ class GuideHandler(SimpleHTTPRequestHandler):
             self.server.beacons.record(method, raw, body, origin, ua)
             self.server.stats.beacon()
         except Exception:
-            pass
+            self.send_error(500, "Could not record beacon; check the host log")
+            return
 
         self.log_request(204)
         try:
@@ -833,7 +839,7 @@ class GuideHandler(SimpleHTTPRequestHandler):
         logging CLOSE with the death timestamp. No JS cooperation needed."""
         peer = self.client_address[0]
         tag = self.path.split("?", 1)[1][:120] if "?" in self.path else ""
-        hold_log = "/tmp/opencode/hold.log"
+        hold_log = os.path.join(REPO_ROOT, "host-hold.log")
 
         def _hlog(kind, extra=""):
             try:
@@ -1018,8 +1024,8 @@ class GuideHandler(SimpleHTTPRequestHandler):
             if self.server.stats.milestone("document"):
                 say("")
                 good("User's Guide document served.")
-                note("The WebKit exploit should be running on the PS5 now.")
-                note("Reload the User's Guide if the browser stalls.")
+                note("Check the baseline beacon before selecting a research probe.")
+                note("A served page does not prove an exploit succeeded.")
                 note("")
                 note("When done, set the PS5 DNS back to automatic,")
                 note("otherwise it has no internet.")
@@ -1389,8 +1395,11 @@ def main(argv=None):
 
     print_banner(ip, args)
 
-    good(f"Spoofing {style(args.target, 1)} -> {style(ip, 1, 33)}")
-    note("everything else gets NXDOMAIN (blocks PSN and update prompts)")
+    if not args.no_dns:
+        good(f"Spoofing {style(args.target, 1)} -> {style(ip, 1, 33)}")
+        note("other DNS names get NXDOMAIN; this is not a network firewall")
+    else:
+        note("DNS disabled; no console DNS changes are needed for the desktop check.")
     good(f"Serving "
          f"{REPO_ROOT if not EMBEDDED_ZIP_B64 else 'embedded in-memory bundle'}")
     if args.verbose:
@@ -1474,11 +1483,14 @@ def main(argv=None):
         heartbeat.start()
 
     say("")
-    good(f"Set the PS5 DNS to {style(ip, 1, 33)}")
-    note("Settings -> Network -> Settings -> Set Up Internet Connection")
-    note("-> Set Up Manually -> DNS Settings -> Primary DNS")
-    say("")
-    good("Waiting for the PS5. Open Settings -> User's Guide when ready.")
+    if not args.no_dns:
+        good(f"Set the PS5 DNS to {style(ip, 1, 33)}")
+        note("Settings -> Network -> Settings -> Set Up Internet Connection")
+        note("-> Set Up Manually -> DNS Settings -> Primary DNS")
+        say("")
+        good("Waiting for the PS5. Open Settings -> User's Guide when ready.")
+    else:
+        good("Host ready. Open the baseline page using the HTTP/HTTPS port above.")
     say("")
 
     # -- Main loop --

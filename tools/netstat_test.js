@@ -73,7 +73,7 @@ function createMockApi(options = {}) {
         listPtr.buffer.write("wlan0\0", b1, "utf8");
         listPtr.buffer.writeUInt32LE(1, b1 + 0x20); // UP
         // IP: 10.0.0.100
-        const wlanIp = [192, 168, 1, 133];
+        const wlanIp = [10, 0, 0, 100];
         for (let i = 0; i < 4; i++) listPtr.buffer.writeUInt8(wlanIp[i], b1 + 40 + i);
         // Netmask: 255.255.255.0
         const wlanMask = [255, 255, 255, 0];
@@ -134,7 +134,7 @@ async function run() {
     const text = api.logs.map((l) => l.msg).join("\n");
     assert.match(text, /=== Network Interfaces ===/);
     assert.match(text, /eth0\s+UP\s+-\s+-\s+78:c8:81:a8:da:c5\s+1500/);
-    assert.match(text, /wlan0\s+UP\s+192\.168\.1\.133\s+255\.255\.255\.0\s+1c:98:c1:98:04:aa\s+1500/);
+    assert.match(text, /wlan0\s+UP\s+10\.0\.0\.100\s+255\.255\.255\.0\s+1c:98:c1:98:04:aa\s+1500/);
     assert.match(text, /=== Active Listening Ports \(3 open, 23 scanned\) ===/);
     assert.match(text, /9021\s+TCP\s+LISTEN\s+elfldr/);
     assert.match(text, /9027\s+TCP\s+LISTEN\s+ps5-webkit-remote-loader/);

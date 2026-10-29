@@ -25,7 +25,7 @@ HEADER = os.path.join(REPO, "installer", "include", "wkrli_version.h")
 WKRLI_H = os.path.join(REPO, "installer", "include", "wkrli.h")
 PARAM_JSON = os.path.join(REPO, "installer", "assets", "param.json")
 PARAM_TEMPLATE = os.path.join(REPO, "installer", "assets", "param.json.template")
-HOST_PY = os.path.join(REPO, "host.py")
+HOST_PY = os.path.join(REPO, "tools", "host.py")
 LOADER_JS = os.path.join(REPO, "src", "loader.js")
 VERSION_PLACEHOLDER = b"[[VERSION_PLACEHOLDER]]"
 

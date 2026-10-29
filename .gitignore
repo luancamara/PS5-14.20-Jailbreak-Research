@@ -66,3 +66,17 @@ Thumbs.db
 *.o
 *.so
 *.dylib
+__pycache__/
+*.pyc
+dist/
+installer/dist/
+installer/include/file_registry.h
+installer/include/file_registry.c
+installer/include/.file_registry.stamp
+installer/include/wkrli_version.h
+installer/assets/param.json
+installer/assets/icon0.png
+installer/assets/icon.ico
+installer.elf
+webkit-remote-loader-host*.py
+webkit-remote-loader-installer_v*.elf

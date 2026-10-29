@@ -106,7 +106,7 @@ class CustomizationTest(unittest.TestCase):
         self.assertNotIn('padding-right: 200px', html)
         self.assertIn('padding: 16px;', html)
         # Socket-served pages still need the connection and firmware display.
-        served = standalone.read_text('index.html')
+        served = standalone.read_text('loader.html')
         self.assertIn('id="hud"', served)
         self.assertIn('padding-right: 200px', served)
 

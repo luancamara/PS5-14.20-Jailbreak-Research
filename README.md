@@ -1,6 +1,33 @@
 # PS5 14.20 WebKit Exploitation Research
 
-WebKit memory safety research targeting PlayStation 5 firmware 14.20 via CVE-2026-43720 (Canvas `getContext()` reentrant UAF). All data from probes running on retail hardware through the built-in browser.
+WebKit memory safety research targeting PlayStation 5 firmware 14.20 via CVE-2026-43720 (Canvas `getContext()` reentrant UAF). The upstream reports results from retail hardware; this fork adds portable hosting and local regression checks. Hardware results have not been independently reproduced in this fork.
+
+## Fork para testes em outra máquina
+
+Este fork prepara o host e a coleta de evidências. A página inicial executa um
+diagnóstico sem exploit e oferece links explícitos para V573 e V630. O loader
+legado está em `loader.html`, preserva o firmware informado pelo navegador e
+rejeita 14.20, que não possui uma tabela suportada. Os probes de pesquisa são
+independentes desse loader.
+
+**Não há jailbreak completo de 14.20 demonstrado por este fork.** As descrições
+históricas abaixo pertencem à pesquisa upstream; não equivalem a validação
+independente em hardware. O relato APNG/V674 ainda precisa do probe e dos
+resultados originais para reprodução.
+
+```sh
+git clone https://github.com/luancamara/PS5-14.20-Jailbreak-Research.git
+cd PS5-14.20-Jailbreak-Research
+python3 tools/host.py --no-dns --no-https --http-port 8080 --no-watch --no-heartbeat
+```
+
+Abra `http://127.0.0.1:8080/` para conferir a página e o beacon HTTP 204.
+O uso no PS5 exige DNS/HTTPS e configuração da rede: siga o
+**[passo a passo em português](docs/TESTE_PS5.md)**. Para copiar um único arquivo,
+use `python3 tools/build_host.py`; o host gerado inclui páginas, probes e
+certificado de teste. Para validar o código, execute `make test` com Node 24,
+Python 3.10+ e um compilador C. O host em si usa apenas Python e, no modo fonte
+HTTPS, o executável `openssl`.
 
 > **Disclaimer:** Authorized security research on personally owned hardware. For educational and research purposes only.
 
@@ -40,7 +67,7 @@ Every contribution helps keep the models running and the research moving forward
 | Same-Type Reclaim | CONFIRMED | 500x Canvas2D spray reclaims freed slot (V573) |
 | Alias R/W | CONFIRMED | All 12 Canvas2D APIs work through stale wrapper (V630) |
 | Crash Oracle | CONFIRMED | Forged `m_stateStack` reads 8 bytes at arbitrary address (V650-V655) |
-| ASLR Defeat | CONFIRMED | APNG overread leaks 1651 heap pointers (V674) |
+| ASLR Defeat | UNVERIFIED IN THIS FORK | Upstream reports APNG/V674; probe and raw results are not included |
 | Arbitrary R/W | DESIGNED | Forge lineDash Vector in AB, `setLineDash` writes in-place |
 | Code Exec | **NEXT** | vtable hijack + ROP (no PAC, no JIT, JSC Config unfrozen) |
 | Kernel | BLOCKED | Needs browser code execution first |
@@ -83,12 +110,12 @@ After the trigger, a spray of 500 Canvas2D contexts reclaims the freed 768B slot
 | Matrix Read | `getTransform` (DOMMatrix) | CONFIRMED |
 | State Stack | `save` / `restore` (3-level cycle) | CONFIRMED |
 | Crash Oracle | Forged `m_stateStack` + `lineWidth` read | CONFIRMED |
-| ASLR Bypass | APNG overread leaks heap pointers | CONFIRMED (V674) |
+| ASLR Bypass | Upstream APNG/V674 report | UNVERIFIED: reproduction artifacts missing |
 
 ### Planned Exploitation Path
 
 1. V573 same-type reclaim -- alias to live context
-2. V674 APNG overread -- heap address leaked
+2. Reproduce the upstream V674 APNG lead -- heap leak remains unverified here
 3. Grow `stateStack` -- realloc frees old buffer -- AB spray reclaims it
 4. Forge lineDash `Vector<double>` in AB (`m_buffer` = target, `m_size` = N)
 5. `getLineDash` through alias -- arbitrary read
@@ -153,11 +180,10 @@ archive/                 -- Old backups and duplicate files
 
 ## Usage
 
-1. Clone the repo
-2. Set up a DNS redirect pointing a domain to your host machine (`[HOST_IP]`)
-3. Run `python3 tools/remote-loader/host.py` on the host
-4. Open the URL on the PS5 browser
-5. Watch the beacon log for results
+Follow [docs/TESTE_PS5.md](docs/TESTE_PS5.md) for prerequisites, desktop checks,
+PS5 DNS/HTTPS setup, probe selection, evidence capture and troubleshooting.
+The canonical entry point is `python3 tools/host.py`; the older
+`tools/remote-loader/host.py` path delegates to the same implementation.
 
 Probes report back via image beacon requests. Each probe is a self-contained HTML file in `probes/` that can be served directly.
 

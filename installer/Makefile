@@ -59,13 +59,15 @@ $(FILE_REGISTRY_STAMP): version icons
 	mkdir -p $(STAGE_DIR)/app/$$V && \
 	cp -R installer/frontend/installer-page/. $(STAGE_DIR)/ && \
 	cp -R installer/frontend/pointer/. $(STAGE_DIR)/app/ && \
-	cp index.html $(STAGE_DIR)/app/$$V/ && \
+	cp loader.html $(STAGE_DIR)/app/$$V/index.html && \
 	cp -R src $(STAGE_DIR)/app/$$V/ && \
 	cp -R offsets $(STAGE_DIR)/app/$$V/ && \
 	cp -R shared $(STAGE_DIR)/app/$$V/ && \
 	if [ -d payloads ]; then cp -R payloads $(STAGE_DIR)/app/$$V/; fi && \
 	mkdir -p $(STAGE_DIR)/app/$$V/tools && \
 	cp tools/send.py $(STAGE_DIR)/app/$$V/tools/ && \
+	mkdir -p $(STAGE_DIR)/app/$$V/tools/remote-loader/runtime-derive && \
+	cp tools/remote-loader/runtime-derive/derive-runtime.js $(STAGE_DIR)/app/$$V/tools/remote-loader/runtime-derive/ && \
 	echo "$$V" > $(STAGE_DIR)/VERSION
 	@echo "Generating file registry from $(STAGE_DIR)..."
 	$(PYTHON) tools/gen_installer_registry.py $(STAGE_DIR) $(FILE_REGISTRY_H) $(FILE_REGISTRY_C)

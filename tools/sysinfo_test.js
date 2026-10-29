@@ -148,10 +148,10 @@ function createMockApi(options = {}) {
         const RECORD = 0x3c0;
         buf.buffer.fill(0, buf.low, buf.low + RECORD * count);
         buf.buffer.write("eth0", buf.low, "utf8");
-        buf.buffer.writeUInt8(192, buf.low + 40);
-        buf.buffer.writeUInt8(168, buf.low + 41);
-        buf.buffer.writeUInt8(1, buf.low + 42);
-        buf.buffer.writeUInt8(133, buf.low + 43);
+        buf.buffer.writeUInt8(10, buf.low + 40);
+        buf.buffer.writeUInt8(0, buf.low + 41);
+        buf.buffer.writeUInt8(0, buf.low + 42);
+        buf.buffer.writeUInt8(100, buf.low + 43);
         return ok(0);
       }
 

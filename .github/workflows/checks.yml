@@ -1,0 +1,46 @@
+name: Portable host checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '24'
+      - name: Offline regressions
+        run: make test
+      - name: Shared native helpers with stubbed PS5 services
+        if: runner.os == 'Linux'
+        run: make test-native
+      - name: Runtime derivation ELF fixtures
+        if: runner.os == 'Linux'
+        run: |
+          sh tools/remote-loader/runtime-derive/test/fixture/build.sh
+          node tools/remote-loader/runtime-derive/test/mock-run.js
+      - name: Build portable host and standalone loader page
+        run: |
+          make host
+          python3 tools/build_standalone.py payloads/hello_world.js --no-kexp --probe -o "$RUNNER_TEMP/standalone.html"
+      - name: Upload portable host
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: portable-test-host
+          path: webkit-remote-loader-host.py
+          if-no-files-found: error

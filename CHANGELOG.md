@@ -1,7 +1,14 @@
 # Changelog
 
+## Fork — portable PS5 testing
+- Default baseline page, explicit probe links and Portuguese hardware test guide.
+- Shared source/bundled host with GET/POST beacons and visible persistence errors.
+- Corrected firmware detection, paths, loader template and packaging.
+- Installer mutations restricted to local POST requests with an action header.
+- Offline regression suite and macOS/Linux CI; PS5 and Windows validation pending.
+
 ## Oct 22-23 -- ASLR Defeat Work
-- APNG overread leaks 1651 heap pointers on device (V674)
+- Upstream reports 1651 heap pointers via APNG/V674; reproduction artifacts are missing from this fork.
 - Heap topology mapping via binary subdivision scanner (V650-V655)
 - DAZ confirmed ON -- all float64 channels flush denormals to zero
 - BigUint64Array confirmed as bypass for raw pointer handling

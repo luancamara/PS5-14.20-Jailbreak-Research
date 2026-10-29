@@ -12,11 +12,26 @@ host: version
 
 installer:
 	@echo "Building installer ELF via Docker SDK..."
-	./build_release.sh
+	bash tools/build_release.sh
 
 test:
 	node tools/selftest.js
 	node tools/standalone_test.js
+	node tools/firmware_test.js
+	node tools/diagnostics_test.js
+	node tools/notify_test.js
+	node tools/sysinfo_test.js
+	node tools/ps_test.js
+	node tools/netstat_test.js
+	node tools/df_test.js
+	node tools/readfile_test.js
+	node tools/klog_test.js
+	node tools/ftp_socket_test.js
+	node tools/ftp_test.js
+	node tools/e2e.js
+	$(PYTHON) tools/host_test.py
+	$(PYTHON) tools/portable_host_test.py
+	$(PYTHON) tools/installer_http_test.py
 	$(PYTHON) tools/build_assets_test.py
 	$(PYTHON) tools/build_customization_test.py
 

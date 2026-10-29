@@ -62,6 +62,20 @@ enum MHD_Result http_on_request(void *cls, struct MHD_Connection *conn,
     struct MHD_Response *resp = NULL;
     int http_status = MHD_HTTP_OK;
 
+    if (strcmp(url, ROUTE_INSTALL) == 0 || strcmp(url, ROUTE_EXIT) == 0 ||
+        strcmp(url, ROUTE_CLEAR_WEBKIT_DATA) == 0) {
+        const char *action = MHD_lookup_connection_value(conn, MHD_HEADER_KIND, "X-WKRLI-Action");
+        if (strcmp(method, "POST") != 0 || !action || strcmp(action, url + 1) != 0) {
+            /* The custom header prevents a cross-origin simple request from mutating data. */
+            resp = MHD_create_response_from_buffer(0, NULL, MHD_RESPMEM_PERSISTENT);
+            MHD_add_response_header(resp, "Allow", "POST");
+            enum MHD_Result ret = MHD_queue_response(conn,
+                strcmp(method, "POST") != 0 ? MHD_HTTP_METHOD_NOT_ALLOWED : MHD_HTTP_FORBIDDEN, resp);
+            MHD_destroy_response(resp);
+            return ret;
+        }
+    }
+
     if (strcmp(url, ROUTE_INSTALL) == 0) {
         int err = installer_install_app_if_needed();
         if (err == 0) {

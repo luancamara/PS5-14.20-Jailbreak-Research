@@ -12,13 +12,10 @@ const supportedFirmware = [
 const firmwareUserAgent = navigator.userAgent;
 const firmwareMatch = /PlayStation 5\/(\d+\.\d+)/.exec(firmwareUserAgent);
 const firmwareVersion = firmwareMatch ? firmwareMatch[1] : "";
-// EXPERIMENT-PIN-104007: DDP HAR (device-audit-20261014) recorded system-version 10400007 = 10.40; the webview UA says "PlayStation 5/14.20" — one of the two is wrong. Pin to the DDP value for this attempt.
-const firmwarePinned = (firmwareUserAgent.includes("PlayStation 5")) ? "10.40" : "";
-
-window.fw_str = firmwarePinned || firmwareVersion;
+window.fw_str = firmwareVersion;
 window.firmware = {
   rejection() {
-    const effectiveVersion = firmwarePinned || firmwareVersion;
+    const effectiveVersion = firmwareVersion;
     if (!firmwareUserAgent.includes("PlayStation 5")) {
       return "PlayStation 5 Required";
     }

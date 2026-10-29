@@ -92,17 +92,17 @@ Forging `m_stateStack` (Vector at context offset +112) in an aliased ArrayBuffer
 This gives a binary "mapped / not mapped" oracle plus 8-byte data reads from arbitrary
 addresses.
 
-## ASLR Defeat (V674)
+## Upstream ASLR lead (V674) — not reproduced in this fork
 
-APNG animated PNG overread leaks 1651 heap pointers from adjacent allocations via
-canvas getImageData. Provides heap address space layout information needed for the
-exploitation chain.
+The upstream reports an APNG overread exposing 1651 heap pointers via canvas
+getImageData. The V674 probe and its raw results are absent from this checkout.
+This remains an unverified lead here, not a demonstrated ASLR bypass.
 
 ## Exploitation Chain
 
 1. **UAF trigger** -> `innerCtx` points to freed 768B slot
 2. **Same-type reclaim** -> spray ctx aliases `innerCtx`
-3. **Info leak** -> APNG overread leaks heap pointers (V674)
+3. **Info leak** -> reproduce the upstream APNG/V674 report (artifacts missing)
 4. **State buffer grow** -> 8x save() = 6400B out-of-line buffer
 5. **State buffer free** -> BMR trigger frees inner ctx + state buffer
 6. **AB reclaim state buffer** -> 200x ArrayBuffer(6400) sprayed
@@ -155,4 +155,4 @@ BigUint64Array for full 64-bit pointer reads once data is in an ArrayBuffer.
 | V573 | Same-type reclaim diagnostic | CONFIRMED: bidirectional R/W |
 | V589 | BMR trigger validation | uaf-ok: inner=OK |
 | V630 | Full 12-API alias diagnostic | ALL APIs pass, alias at idx=11 |
-| V674 | ASLR bypass via APNG overread | 1651 heap pointers leaked |
+| V674 | Upstream APNG overread report | Unverified in this fork: probe and raw results missing |

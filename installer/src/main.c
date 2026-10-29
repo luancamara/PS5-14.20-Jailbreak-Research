@@ -8,6 +8,7 @@
  */
 
 #include <microhttpd.h>
+#include <arpa/inet.h>
 #include <signal.h>
 #include <stdatomic.h>
 #include <stdint.h>
@@ -103,9 +104,16 @@ int main(void) {
     signal(SIGHUP, SIG_IGN);
     signal(SIGTERM, SIG_IGN);
 
+    struct sockaddr_in listen_addr = {0};
+    listen_addr.sin_len = sizeof(listen_addr);
+    listen_addr.sin_family = AF_INET;
+    listen_addr.sin_port = htons(WKRLI_PORT);
+    listen_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+
     daemon = MHD_start_daemon(MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_DEBUG,
                               WKRLI_PORT, NULL, NULL, &http_on_request,
                               NULL,
+                              MHD_OPTION_SOCK_ADDR, (struct sockaddr *)&listen_addr,
                               MHD_OPTION_THREAD_POOL_SIZE, (unsigned int)8,
                               MHD_OPTION_END);
 

@@ -44,13 +44,12 @@ CVE-2026-43720 confirmed on device through a series of probes:
 - Crash oracle (forge m_stateStack to target address, lineWidth reads 8 bytes)
 - Heap topology mapping (V650-V655 binary subdivision scanner)
 - DAZ confirmed ON (all float64 channels flush denormals to 0)
-- APNG overread leaks 1651 heap pointers (V674)
 
 **Current blocker: Info leak (ASLR defeat)**
 
 All Canvas2D APIs return typed JS values -- no raw heap pointer exposed. 10+ dedicated info leak approaches exhausted. Current candidates:
 1. OOB state stack read via save-count mismatch
-2. APNG overread pointer extraction
+2. Reproduce upstream APNG/V674 pointer extraction; probe and raw results missing
 
 **Designed but not yet reached:**
 - Forge lineDash Vector in AB for arbitrary R/W

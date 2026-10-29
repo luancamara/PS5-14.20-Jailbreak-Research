@@ -2,7 +2,7 @@
 # PS5 WebKit Remote Loader - Versioned Release Build Script
 
 set -e
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 
 # 1. Compute version and build time
 python3 tools/gen_version.py
@@ -28,7 +28,7 @@ echo "[*] Cleaned old versioned artifacts"
 # 3. Check or build the shared SDK Docker image
 if [[ "$(docker images -q $IMAGE_NAME 2> /dev/null)" == "" ]]; then
     echo "[*] Docker image $IMAGE_NAME not found. Building SDK image..."
-    docker build -t "$IMAGE_NAME" -f Dockerfile.sdk .
+    docker build -t "$IMAGE_NAME" -f tools/Dockerfile.sdk .
     echo "[*] Docker image built successfully."
 fi
 

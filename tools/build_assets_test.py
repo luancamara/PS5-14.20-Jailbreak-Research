@@ -75,124 +75,50 @@ class EmbeddedAssetsTest(unittest.TestCase):
             compile(source, output, 'exec')
             self.assertIn('HOST_NAME = ' + json.dumps('Custom "host"'), source)
 
+    def test_default_host_contains_diagnostics_and_probes(self):
+        archive, files = host.build_zip()
+        for name in ('index.html', 'loader.html', 'src/diagnostics.js',
+                     'probes/canvas-uaf/v573-reclaim-diagnostic.html',
+                     'probes/canvas-uaf/v630.html', 'shared/elfldr-ps5-v0.26.elf',
+                     'shared/kexp-v0.8-24cf6e5.bin'):
+            self.assertTrue(name in files, name)
+        with zipfile.ZipFile(io.BytesIO(archive)) as bundle:
+            self.assertIn(b'PS5 baseline', bundle.read('index.html'))
+
+    def test_bundle_excludes_private_and_generated_files(self):
+        for name in ('probes/.env', 'probes/run.log', 'probes/run.jsonl',
+                     'assets/server.key', 'src/__pycache__/file.pyc'):
+            self.assertFalse(host.should_include(name), name)
+
     def test_multi_page_host_and_fw_routing(self):
-        import sys
-        sys.path.insert(0, host.repo_root())
+        from unittest.mock import patch
         import host as live_host
 
         with tempfile.TemporaryDirectory() as directory:
-            p_relapse = os.path.join(directory, 'relapse.html')
-            p_poops = os.path.join(directory, 'poops.html')
-            data_relapse = b'<!doctype html><title>Relapse</title>'
-            data_poops = b'<!doctype html><title>Poops</title>'
-            with open(p_relapse, 'wb') as f:
-                f.write(data_relapse)
-            with open(p_poops, 'wb') as f:
-                f.write(data_poops)
-
-            archive, files = host.build_zip([
-                f'index.html={p_relapse}',
-                f'relapse.html={p_relapse}',
-                f'poops.html={p_poops}',
-            ])
-            self.assertEqual(sorted(files.keys()), ['index.html', 'poops.html', 'relapse.html'])
-
-            with zipfile.ZipFile(io.BytesIO(archive)) as zf:
-                self.assertEqual(sorted(zf.namelist()), ['index.html', 'poops.html', 'relapse.html'])
-                self.assertEqual(zf.read('index.html'), data_relapse)
-                self.assertEqual(zf.read('poops.html'), data_poops)
-
-            # Test routing logic in GuideHandler
-            old_zip = live_host._embedded_zip_cache
-            old_loaded = live_host._embedded_zip_loaded
-            try:
-                live_host._embedded_zip_cache = zipfile.ZipFile(io.BytesIO(archive))
-                live_host._embedded_zip_loaded = True
-
-                handler = live_host.GuideHandler.__new__(live_host.GuideHandler)
-                handler.allowed_host = None
-
-                # 1. Normal PS5 FW (e.g. 7.61) -> serves index.html (Relapse)
-                handler.path = '/document/en/ps5/index.html'
-                handler.headers = {'User-Agent': 'Mozilla/5.0 (PlayStation 5/7.61) AppleWebKit/605.1.15'}
-                res = handler._resolve()
-                self.assertEqual(res[2], 'index.html')
-                self.assertEqual(res[3], data_relapse)
-
-                # 2. PS5 FW 9.05 (incompatible with Relapse) -> routes to poops.html
-                handler.path = '/document/en/ps5/index.html'
-                handler.headers = {'User-Agent': 'Mozilla/5.0 (PlayStation 5/9.05) AppleWebKit/605.1.15'}
-                res = handler._resolve()
-                self.assertEqual(res[2], 'poops.html')
-                self.assertEqual(res[3], data_poops)
-
-                # 3. PS5 FW 11.40 (incompatible with Relapse) -> routes to poops.html
-                handler.path = '/document/en/ps5/index.html'
-                handler.headers = {'User-Agent': 'Mozilla/5.0 (PlayStation 5/11.40) AppleWebKit/605.1.15'}
-                res = handler._resolve()
-                self.assertEqual(res[2], 'poops.html')
-                self.assertEqual(res[3], data_poops)
-
-                # 4. Explicit query override ?exploit=poops on FW 7.61 -> routes to poops.html
-                handler.path = '/document/en/ps5/index.html?exploit=poops'
-                handler.headers = {'User-Agent': 'Mozilla/5.0 (PlayStation 5/7.61) AppleWebKit/605.1.15'}
-                res = handler._resolve()
-                self.assertEqual(res[2], 'poops.html')
-                self.assertEqual(res[3], data_poops)
-
-                # 5. Explicit query override ?exploit=relapse on FW 9.05 -> routes to relapse.html
-                handler.path = '/document/en/ps5/index.html?exploit=relapse'
-                handler.headers = {'User-Agent': 'Mozilla/5.0 (PlayStation 5/9.05) AppleWebKit/605.1.15'}
-                res = handler._resolve()
-                self.assertEqual(res[2], 'relapse.html')
-                self.assertEqual(res[3], data_relapse)
-            finally:
-                live_host._embedded_zip_cache = old_zip
-                live_host._embedded_zip_loaded = old_loaded
-
-            # Test two-page host (index.html=relapse and poops.html) where relapse.html is not duplicated
-            archive2, files2 = host.build_zip([
-                f'index.html={p_relapse}',
-                f'poops.html={p_poops}',
-            ])
-            self.assertEqual(sorted(files2.keys()), ['index.html', 'poops.html'])
-            try:
-                live_host._embedded_zip_cache = zipfile.ZipFile(io.BytesIO(archive2))
-                live_host._embedded_zip_loaded = True
-
-                handler = live_host.GuideHandler.__new__(live_host.GuideHandler)
-                handler.allowed_host = None
-
-                # 1. Normal PS5 FW -> index.html (Relapse)
-                handler.path = '/document/en/ps5/index.html'
-                handler.headers = {'User-Agent': 'Mozilla/5.0 (PlayStation 5/7.61) AppleWebKit/605.1.15'}
-                res = handler._resolve()
-                self.assertEqual(res[2], 'index.html')
-                self.assertEqual(res[3], data_relapse)
-
-                # 2. FW 9.05 -> poops.html
-                handler.path = '/document/en/ps5/index.html'
-                handler.headers = {'User-Agent': 'Mozilla/5.0 (PlayStation 5/9.05) AppleWebKit/605.1.15'}
-                res = handler._resolve()
-                self.assertEqual(res[2], 'poops.html')
-                self.assertEqual(res[3], data_poops)
-
-                # 3. Explicit query override ?exploit=relapse on FW 9.05 -> resolves to index.html (Relapse)
-                handler.path = '/document/en/ps5/index.html?exploit=relapse'
-                handler.headers = {'User-Agent': 'Mozilla/5.0 (PlayStation 5/9.05) AppleWebKit/605.1.15'}
-                res = handler._resolve()
-                self.assertEqual(res[2], 'index.html')
-                self.assertEqual(res[3], data_relapse)
-
-                # 4. Explicit direct request to /relapse.html -> falls back to index.html (Relapse)
-                handler.path = '/relapse.html'
-                handler.headers = {'User-Agent': 'Mozilla/5.0 (PlayStation 5/7.61) AppleWebKit/605.1.15'}
-                res = handler._resolve()
-                self.assertEqual(res[2], 'index.html')
-                self.assertEqual(res[3], data_relapse)
-            finally:
-                live_host._embedded_zip_cache = old_zip
-                live_host._embedded_zip_loaded = old_loaded
+            relapse = os.path.join(directory, 'relapse.html')
+            poops = os.path.join(directory, 'poops.html')
+            with open(relapse, 'wb') as f:
+                f.write(b'RELAPSE')
+            with open(poops, 'wb') as f:
+                f.write(b'POOPS')
+            for explicit_relapse in (False, True):
+                pages = [f'index.html={relapse}', f'poops.html={poops}']
+                if explicit_relapse:
+                    pages.append(f'relapse.html={relapse}')
+                archive, _ = host.build_zip(pages)
+                with zipfile.ZipFile(io.BytesIO(archive)) as bundle, \
+                        patch.object(live_host, '_embedded_zip_cache', bundle), \
+                        patch.object(live_host, '_embedded_zip_loaded', True):
+                    for firmware, override, expected in (
+                            (7.61, None, b'RELAPSE'), (9.05, None, b'POOPS'),
+                            (11.40, None, b'POOPS'), (7.61, 'poops', b'POOPS'),
+                            (9.05, 'relapse', b'RELAPSE')):
+                        for path in ('/', '/index.html', '/document/en/ps5/index.html'):
+                            result = live_host.resolve_file(
+                                live_host.normalize_request_path(path), firmware, override)
+                            self.assertEqual(result[3], expected, (path, firmware, override))
+                    result = live_host.resolve_file('relapse.html')
+                    self.assertEqual(result[3], b'RELAPSE')
 
 
 if __name__ == '__main__':
