@@ -1192,12 +1192,19 @@ def setup_tls(httpsd, args, stats):
 # Server Builder
 # ===========================================================================
 
+class GuideHTTPServer(ThreadingHTTPServer):
+    def server_bind(self):
+        # HTTPServer's reverse DNS lookup can block startup on macOS runners.
+        socketserver.TCPServer.server_bind(self)
+        self.server_name, self.server_port = self.server_address[:2]
+
+
 def build_server(host, port, allowed_host, stats, beacons, quiet=False):
     """Create a ThreadingHTTPServer with the GuideHandler and shared state."""
     handler = lambda *a, **kw: GuideHandler(
         *a, allowed_host=allowed_host, **kw
     )
-    httpd = ThreadingHTTPServer((host, port), handler)
+    httpd = GuideHTTPServer((host, port), handler)
     httpd.daemon_threads = True
     httpd.stats = stats
     httpd.beacons = beacons

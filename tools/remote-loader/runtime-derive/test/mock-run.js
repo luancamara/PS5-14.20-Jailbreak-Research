@@ -90,12 +90,13 @@ const wkMod = I.parseElf(p, WK_BASE);
 ok("parseElf -> ET_DYN ELF64", !!(wkMod && wkMod.e_type === 3 && wkMod.ph.length >= 4));
 
 // (3) findModuleBase from interior .text
-const interior = WK_BASE + 0x1040 + 0x20;   // inside derive_gadget_blob
+const dyn = I.elfDyn(p, wkMod);
+const gadgetBlob = dyn.exports.derive_gadget_blob.value;
+const interior = WK_BASE + gadgetBlob + 0x20;
 const found = I.findModuleBase(p, interior);
 ok("findModuleBase(interior) == wk base", found && found.base === WK_BASE, "got 0x" + (found ? found.base.toString(16) : "null"));
 
 // (4) elfDyn imports/exports
-const dyn = I.elfDyn(p, wkMod);
 ok("elfDyn parsed", !!dyn);
 ok("import memset matched (JUMP_SLOT)", dyn.imports.memset && dyn.imports.memset.type === 7, "slot=0x" + (dyn.imports.memset && dyn.imports.memset.slot.toString(16)));
 ok("import __stack_chk_guard matched (GLOB_DAT)", dyn.imports.__stack_chk_guard && dyn.imports.__stack_chk_guard.type === 6, "slot=0x" + (dyn.imports.__stack_chk_guard && dyn.imports.__stack_chk_guard.slot.toString(16)));
@@ -114,7 +115,7 @@ const g = I.scanText(p, wkMod);
 const names = Object.keys(I.GADGETS);
 const gmissing = names.filter((n) => !(n in g));
 ok("scanText finds all " + names.length + " gadget patterns", gmissing.length === 0, gmissing.length ? "missing=" + gmissing.join(",") : "");
-ok("pop rdi gadget at expected offset", g["pop rdi"] === WK_BASE + 0x1040, "0x" + (g["pop rdi"] || 0).toString(16));
+ok("pop rdi gadget matches fixture symbol", g["pop rdi"] === WK_BASE + gadgetBlob, "0x" + (g["pop rdi"] || 0).toString(16));
 
 // (7) syscall stub fallback
 const stub = I.findSyscallStub(p, I.parseElf(p, LK_BASE), 0x14);
@@ -122,7 +123,7 @@ ok("findSyscallStub(getpid) in libk", stub != null, stub ? "0x" + stub.toString(
 
 // (8) full ladder end-to-end
 (async () => {
-  globalThis.__ps5NativeCtor = WK_BASE + 0x1040;
+  globalThis.__ps5NativeCtor = WK_BASE + gadgetBlob;
   const man = await DR.run(p);
   ok("run() ok", man && man.ok === true);
   ok("wk base derived", man.wkBaseNum === WK_BASE, "0x" + man.wkBaseNum.toString(16));

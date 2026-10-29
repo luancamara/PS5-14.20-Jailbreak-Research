@@ -46,6 +46,11 @@ class HostTest(unittest.TestCase):
                 self.assertIn('PS5 baseline', body)
                 self.assertNotIn('http-equiv="refresh"', body)
 
+    def test_http_startup_does_not_depend_on_reverse_dns(self):
+        with patch('socket.getfqdn', side_effect=AssertionError('Reverse DNS must not block startup')):
+            server = host.build_server('127.0.0.1', 0, None, host.Stats(), self.beacons, True)
+        server.server_close()
+
     def test_documented_probes_and_resources_are_served(self):
         for path in ('/src/diagnostics.js', '/probes/canvas-uaf/v573-reclaim-diagnostic.html',
                      '/document/en/ps5/probes/canvas-uaf/v630.html', '/loader.html'):
